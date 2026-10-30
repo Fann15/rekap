@@ -1,0 +1,14 @@
+<?php
+namespace App\Http\Controllers;
+use App\Models\{DataPerizinan,JenisIzin}; use Illuminate\Http\Request;
+class DataPerizinanController extends Controller {
+ public function index(Request $r){ $q=DataPerizinan::with(['user','jenisIzin','verifier'])->latest(); if(!$r->user()->isAdmin())$q->where('user_id',$r->user()->id); if($r->periode_bulan)$q->where('periode_bulan',$r->periode_bulan); if($r->periode_tahun)$q->where('periode_tahun',$r->periode_tahun); if($r->status_verifikasi)$q->where('status_verifikasi',$r->status_verifikasi); return view('perizinan.index',['data'=>$q->paginate(10)->withQueryString(),'jenisIzins'=>JenisIzin::orderBy('nama_jenis_izin')->get()]); }
+ public function create(){return view('perizinan.form',['item'=>new DataPerizinan,'jenisIzins'=>JenisIzin::orderBy('nama_jenis_izin')->get()]);}
+ public function store(Request $r){$this->save($r,new DataPerizinan);return redirect()->route('data-perizinan.index')->with('success','Laporan perizinan berhasil ditambahkan.');}
+ public function edit(Request $r,DataPerizinan $dataPerizinan){$this->authorizeItem($r,$dataPerizinan);return view('perizinan.form',['item'=>$dataPerizinan,'jenisIzins'=>JenisIzin::orderBy('nama_jenis_izin')->get()]);}
+ public function update(Request $r,DataPerizinan $dataPerizinan){$this->authorizeItem($r,$dataPerizinan);$this->save($r,$dataPerizinan);return redirect()->route('data-perizinan.index')->with('success','Laporan berhasil diperbarui.');}
+ public function destroy(Request $r,DataPerizinan $dataPerizinan){$this->authorizeItem($r,$dataPerizinan);$dataPerizinan->delete();return back()->with('success','Laporan berhasil dihapus.');}
+ public function verify(Request $r, DataPerizinan $dataPerizinan){$v=$r->validate(['status_verifikasi'=>'required|in:disetujui,ditolak','catatan_verifikasi'=>'nullable|string|max:1000']);$dataPerizinan->update($v+['diverifikasi_oleh'=>$r->user()->id,'diverifikasi_pada'=>now()]);return back()->with('success','Status laporan telah diperbarui.');}
+ private function save(Request $r,DataPerizinan $item):void{$v=$r->validate(['jenis_izin_id'=>'required|exists:jenis_izin,id','nama_pemohon'=>'required|string|max:255','tanggal_pengajuan'=>'required|date','tanggal_selesai'=>'nullable|date|after_or_equal:tanggal_pengajuan','status'=>'required|in:proses,selesai,ditolak','keterangan'=>'nullable|string','periode_bulan'=>'required|integer|between:1,12','periode_tahun'=>'required|integer|min:2020|max:2100']);$v['user_id']=$item->exists?$item->user_id:$r->user()->id;if(!$r->user()->isAdmin()){ $v['status_verifikasi']='menunggu';$v['catatan_verifikasi']=null;$v['diverifikasi_oleh']=null;$v['diverifikasi_pada']=null; }$item->fill($v)->save();}
+ private function authorizeItem(Request $r,DataPerizinan $i):void{abort_unless($r->user()->isAdmin()||$i->user_id===$r->user()->id,403);}
+}

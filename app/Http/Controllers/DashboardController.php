@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers;
+use App\Models\DataPerizinan; use Illuminate\Http\Request; use Illuminate\Support\Facades\DB;
+class DashboardController extends Controller { public function index(Request $r){$q=DataPerizinan::query();if(!$r->user()->isAdmin())$q->where('user_id',$r->user()->id);$total=(clone $q)->count();$selesai=(clone $q)->where('status','selesai')->count();$avg=(clone $q)->whereNotNull('tanggal_selesai')->selectRaw('AVG(DATEDIFF(tanggal_selesai,tanggal_pengajuan)) as avg')->value('avg');$status=(clone $q)->select('status',DB::raw('count(*) total'))->groupBy('status')->pluck('total','status');$jenis=(clone $q)->join('jenis_izin','data_perizinan.jenis_izin_id','=','jenis_izin.id')->select('jenis_izin.nama_jenis_izin',DB::raw('count(*) total'))->groupBy('jenis_izin.nama_jenis_izin')->pluck('total','nama_jenis_izin');return view('dashboard',['total'=>$total,'selesai'=>$selesai,'avg'=>round($avg??0,1),'status'=>$status,'jenis'=>$jenis]);} }

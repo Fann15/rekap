@@ -1,0 +1,4 @@
+<?php
+namespace App\Exports;
+use App\Models\DataPerizinan; use Maatwebsite\Excel\Concerns\{FromCollection,WithHeadings,WithMapping};
+class RekapPerizinanExport implements FromCollection,WithHeadings,WithMapping { public function __construct(private array $filters=[]){ } public function collection(){ $q=DataPerizinan::with(['user','jenisIzin']);foreach($this->filters as $k=>$v)if($v!==null&&$v!=='')$q->where($k,$v);return $q->latest()->get(); } public function headings():array{return ['No','Pegawai','Divisi','Jenis Izin','Pemohon','Pengajuan','Selesai','Status','Keterangan','Periode'];} public function map($x):array{return [$x->id,$x->user->name,$x->user->divisi,$x->jenisIzin->nama_jenis_izin,$x->nama_pemohon,$x->tanggal_pengajuan->format('d-m-Y'),$x->tanggal_selesai?->format('d-m-Y'),ucfirst($x->status),$x->keterangan,$x->periode_bulan.'/'.$x->periode_tahun];} }
